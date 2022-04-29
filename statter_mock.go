@@ -20,7 +20,7 @@ type mockStatter struct {
 	noop   bool
 }
 
-func (s *mockStatter) Count(name string, value int64, tags []string, rate float64) error {
+func (s *mockStatter) Count(name string, value interface{}, tags []string) error {
 	if s.noop {
 		return nil
 	}
@@ -28,7 +28,7 @@ func (s *mockStatter) Count(name string, value int64, tags []string, rate float6
 	return nil
 }
 
-func (s *mockStatter) Incr(name string, tags []string, rate float64) error {
+func (s *mockStatter) Incr(name string, tags []string) error {
 	if s.noop {
 		return nil
 	}
@@ -36,7 +36,7 @@ func (s *mockStatter) Incr(name string, tags []string, rate float64) error {
 	return nil
 }
 
-func (s *mockStatter) Decr(name string, tags []string, rate float64) error {
+func (s *mockStatter) Decr(name string, tags []string) error {
 	if s.noop {
 		return nil
 	}
@@ -44,7 +44,7 @@ func (s *mockStatter) Decr(name string, tags []string, rate float64) error {
 	return nil
 }
 
-func (s *mockStatter) Gauge(name string, value float64, tags []string, rate float64) error {
+func (s *mockStatter) Gauge(name string, value interface{}, tags []string) error {
 	if s.noop {
 		return nil
 	}
@@ -52,7 +52,7 @@ func (s *mockStatter) Gauge(name string, value float64, tags []string, rate floa
 	return nil
 }
 
-func (s *mockStatter) Timing(name string, value time.Duration, tags []string, rate float64) error {
+func (s *mockStatter) Timing(name string, value time.Duration, tags []string) error {
 	if s.noop {
 		return nil
 	}
@@ -60,7 +60,7 @@ func (s *mockStatter) Timing(name string, value time.Duration, tags []string, ra
 	return nil
 }
 
-func (s *mockStatter) Histogram(name string, value float64, tags []string, rate float64) error {
+func (s *mockStatter) Histogram(name string, value interface{}, tags []string) error {
 	if s.noop {
 		return nil
 	}

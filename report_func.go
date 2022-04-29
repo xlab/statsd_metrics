@@ -45,7 +45,7 @@ func reportFunc(fn, action string, tags ...Tags) {
 
 	tagArray := JoinTags(tags...)
 	tagArray = append(tagArray, getSingleTag("func_name", fn))
-	client.Incr(fmt.Sprintf("func.%v", action), tagArray, 0.77)
+	client.Incr(fmt.Sprintf("func.%v", action), tagArray)
 }
 
 type StopTimerFunc func()
@@ -76,7 +76,7 @@ func ReportFuncTiming(tags ...Tags) StopTimerFunc {
 
 			err := fmt.Errorf("detected stuck function: %s stuck for %v", name, time.Since(start))
 			log.WithError(err).Warningln("detected stuck function")
-			client.Incr("func.stuck", tagArray, 1)
+			client.Incr("func.stuck", tagArray)
 
 		}
 	}(fn, t)
@@ -87,7 +87,7 @@ func ReportFuncTiming(tags ...Tags) StopTimerFunc {
 
 		clientMux.RLock()
 		defer clientMux.RUnlock()
-		client.Timing("func.timing", d, tagArray, 1)
+		client.Timing("func.timing", d, tagArray)
 	}
 }
 
@@ -115,7 +115,7 @@ func ReportClosureFuncTiming(name string, tags ...Tags) StopTimerFunc {
 
 			err := fmt.Errorf("detected stuck function: %s stuck for %v", name, time.Since(start))
 			log.WithError(err).Warningln("detected stuck function")
-			client.Incr("func.stuck", tagArray, 1)
+			client.Incr("func.stuck", tagArray)
 
 		}
 	}(name, t)
@@ -126,7 +126,7 @@ func ReportClosureFuncTiming(name string, tags ...Tags) StopTimerFunc {
 
 		clientMux.RLock()
 		defer clientMux.RUnlock()
-		client.Timing("func.timing", d, tagArray, 1)
+		client.Timing("func.timing", d, tagArray)
 
 	}
 }

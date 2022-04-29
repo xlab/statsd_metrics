@@ -4,7 +4,6 @@ import (
 	"sync"
 	"time"
 
-	dogstatsd "github.com/DataDog/datadog-go/v5/statsd"
 	statsd "github.com/alexcesaro/statsd"
 	"github.com/pkg/errors"
 	log "github.com/xlab/suplog"
@@ -57,12 +56,12 @@ func (m *StatterConfig) BaseTags() []string {
 }
 
 type Statter interface {
-	Count(name string, value int64, tags []string, rate float64) error
-	Incr(name string, tags []string, rate float64) error
-	Decr(name string, tags []string, rate float64) error
-	Gauge(name string, value float64, tags []string, rate float64) error
-	Timing(name string, value time.Duration, tags []string, rate float64) error
-	Histogram(name string, value float64, tags []string, rate float64) error
+	Count(name string, value interface{}, tags []string) error
+	Incr(name string, tags []string) error
+	Decr(name string, tags []string) error
+	Gauge(name string, value interface{}, tags []string) error
+	Timing(name string, value time.Duration, tags []string) error
+	Histogram(name string, value interface{}, tags []string) error
 	Close() error
 }
 
@@ -99,12 +98,16 @@ func Init(addr string, prefix string, cfg *StatterConfig) error {
 
 	switch cfg.Agent {
 	case DatadogAgent:
-		statter, err = dogstatsd.New(
-			addr,
-			dogstatsd.WithNamespace(prefix),
-			dogstatsd.WithWriteTimeout(time.Duration(10)*time.Second),
-			dogstatsd.WithTags(config.BaseTags()),
-		)
+		// TODO: fix dogstatsd
+		//
+		// statter, err = dogstatsd.New(
+		// 	addr,
+		// 	dogstatsd.WithNamespace(prefix),
+		// 	dogstatsd.WithWriteTimeout(time.Duration(10)*time.Second),
+		// 	dogstatsd.WithTags(config.BaseTags()),
+		// )
+		panic("Datadog not implemented")
+
 	case TelegrafAgent:
 		statter, err = newTelegrafStatter(
 			statsd.Address(addr),
