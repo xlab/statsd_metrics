@@ -147,46 +147,25 @@ func (t Tags) With(k, v string) Tags {
 			k: v,
 		}
 	}
+
 	t[k] = v
 	return t
 }
 
-func joinTelegrafTags(tags ...Tags) []string {
-	if len(tags) == 0 {
-		return []string{}
-	}
-
-	tagArray := make([]string, len(tags[0]))
-	i := 0
-	for k, v := range tags[0] {
-		tag := fmt.Sprintf("%s=%s", k, v)
-		tagArray[i] = tag
-		i += 1
-	}
-	return tagArray
-}
-
-func joinDDTags(tags ...Tags) []string {
-	if len(tags) == 0 {
-		return []string{}
-	}
-	tagArray := make([]string, len(tags[0]))
-	i := 0
-	for k, v := range tags[0] {
-		tag := fmt.Sprintf("%s:%s", k, v)
-		tagArray[i] = tag
-		i += 1
-	}
-	return tagArray
-}
-
-// JoinTags decides how to join tags base on agent
+// JoinTags decides how to join tags based on agent used
 func JoinTags(tags ...Tags) []string {
-	if config.Agent == DatadogAgent {
-		return joinDDTags(tags...)
+	if len(tags) == 0 {
+		return []string{}
 	}
 
-	return joinTelegrafTags(tags...)
+	allTags := make([]string, 0, len(tags))
+	for _, tagSet := range tags {
+		for k, v := range tagSet {
+			allTags = append(allTags, getSingleTag(k, v))
+		}
+	}
+
+	return allTags
 }
 
 func getSingleTag(key, value string) string {
