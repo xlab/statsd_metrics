@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	log "github.com/xlab/suplog"
@@ -139,17 +140,79 @@ func funcName() string {
 	return nameParts[len(nameParts)-1]
 }
 
-type Tags map[string]string
+type SafeMap struct {
+	mux *sync.RWMutex
+	m   map[string]string
+}
+
+func newSafeMap() SafeMap {
+	return SafeMap{
+		mux: new(sync.RWMutex),
+		m:   make(map[string]string),
+	}
+}
+
+func newSafeMapWith(k, v string) SafeMap {
+	return SafeMap{
+		mux: new(sync.RWMutex),
+		m: map[string]string{
+			k: v,
+		},
+	}
+}
+
+func (sm SafeMap) IsValid() bool {
+	return sm.mux != nil
+}
+
+func (sm SafeMap) Set(k, v string) SafeMap {
+	sm.mux.Lock()
+	sm.m[k] = v
+	sm.mux.Unlock()
+
+	return sm
+}
+
+func (sm SafeMap) RLock() {
+	sm.mux.RLock()
+}
+
+func (sm SafeMap) RUnlock() {
+	sm.mux.RUnlock()
+}
+
+func (sm SafeMap) Map() map[string]string {
+	return sm.m
+}
+
+type Tags SafeMap
 
 func (t Tags) With(k, v string) Tags {
-	if t == nil || len(t) == 0 {
-		return map[string]string{
-			k: v,
+	if !SafeMap(t).IsValid() {
+		return Tags(newSafeMapWith(k, v))
+	}
+
+	return Tags(SafeMap(t).Set(k, v))
+}
+
+// NewTags unions unsafe maps as a safe maps used for tags.
+func NewTags(mapsToUnion ...map[string]string) Tags {
+	if len(mapsToUnion) == 0 {
+		return Tags(newSafeMap())
+	}
+
+	safeMap := SafeMap{
+		mux: new(sync.RWMutex),
+		m:   make(map[string]string, len(mapsToUnion[0])),
+	}
+
+	for _, m := range mapsToUnion {
+		for k, v := range m {
+			safeMap.m[k] = v
 		}
 	}
 
-	t[k] = v
-	return t
+	return Tags(safeMap)
 }
 
 // JoinTags decides how to join tags based on agent used
@@ -160,9 +223,16 @@ func JoinTags(tags ...Tags) []string {
 
 	allTags := make([]string, 0, len(tags))
 	for _, tagSet := range tags {
-		for k, v := range tagSet {
+		safeMap := SafeMap(tagSet)
+
+		safeMap.RLock()
+
+		m := safeMap.Map()
+		for k, v := range m {
 			allTags = append(allTags, getSingleTag(k, v))
 		}
+
+		safeMap.RUnlock()
 	}
 
 	return allTags
