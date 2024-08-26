@@ -224,6 +224,9 @@ func JoinTags(tags ...Tags) []string {
 	allTags := make([]string, 0, len(tags))
 	for _, tagSet := range tags {
 		safeMap := SafeMap(tagSet)
+		if !safeMap.IsValid() {
+			continue
+		}
 
 		safeMap.RLock()
 
