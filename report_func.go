@@ -212,6 +212,19 @@ func (t Tags) WithBaseTags() Tags {
 	return Tags(allTags)
 }
 
+// Range iterates over the tags and calls the provided function for each key-value pair.
+// The iteration stops if the provided function returns true.
+func (t Tags) Range(rangeFn func(k, v string) (stop bool)) {
+	t.mux.RLock()
+	defer t.mux.RUnlock()
+
+	for k, v := range t.m {
+		if rangeFn(k, v) {
+			return
+		}
+	}
+}
+
 // NewTags unions unsafe maps as a safe maps used for tags.
 func NewTags(mapsToUnion ...map[string]string) Tags {
 	if len(mapsToUnion) == 0 {
