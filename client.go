@@ -9,21 +9,13 @@ import (
 	log "github.com/xlab/suplog"
 )
 
-const (
-	DatadogAgent  = "datadog"
-	TelegrafAgent = "telegraf"
-)
-
 var (
-	ErrUnsupportedAgent = errors.New("unsupported agent type")
-
 	client    Statter
 	clientMux = new(sync.RWMutex)
 	config    *StatterConfig
 )
 
 type StatterConfig struct {
-	Agent                string
 	EnvName              string
 	HostName             string
 	StuckFunctionTimeout time.Duration
@@ -33,23 +25,24 @@ type StatterConfig struct {
 func (m *StatterConfig) BaseTags() []string {
 	var baseTags []string
 
-	switch m.Agent {
+	if len(config.EnvName) > 0 {
+		baseTags = append(baseTags, "env", config.EnvName)
+	}
+	if len(config.HostName) > 0 {
+		baseTags = append(baseTags, "machine", config.HostName)
+	}
 
-	case DatadogAgent:
-		if len(config.EnvName) > 0 {
-			baseTags = append(baseTags, "env:"+config.EnvName)
-		}
-		if len(config.HostName) > 0 {
-			baseTags = append(baseTags, "machine:"+config.HostName)
-		}
-	// telegraf by default
-	default:
-		if len(config.EnvName) > 0 {
-			baseTags = append(baseTags, "env", config.EnvName)
-		}
-		if len(config.HostName) > 0 {
-			baseTags = append(baseTags, "machine", config.HostName)
-		}
+	return baseTags
+}
+
+func (m *StatterConfig) BaseTagsMap() map[string]string {
+	baseTags := make(map[string]string, 2)
+
+	if len(config.EnvName) > 0 {
+		baseTags["env"] = config.EnvName
+	}
+	if len(config.HostName) > 0 {
+		baseTags["machine"] = config.HostName
 	}
 
 	return baseTags
@@ -84,46 +77,25 @@ func Disable() {
 func Init(addr string, prefix string, cfg *StatterConfig) error {
 	config = checkConfig(cfg)
 	if config.MockingEnabled {
-		// init a mock statter instead of real statsd client
 		clientMux.Lock()
 		client = newMockStatter(false)
 		clientMux.Unlock()
 		return nil
 	}
 
-	var (
-		statter Statter
-		err     error
+	statter, err := newTelegrafStatter(
+		statsd.Address(addr),
+		statsd.Prefix(prefix),
+		statsd.ErrorHandler(errHandler),
+		statsd.TagsFormat(statsd.InfluxDB),
+		statsd.Tags(config.BaseTags()...),
 	)
-
-	switch cfg.Agent {
-	case DatadogAgent:
-		// TODO: fix dogstatsd
-		//
-		// statter, err = dogstatsd.New(
-		// 	addr,
-		// 	dogstatsd.WithNamespace(prefix),
-		// 	dogstatsd.WithWriteTimeout(time.Duration(10)*time.Second),
-		// 	dogstatsd.WithTags(config.BaseTags()),
-		// )
-		panic("Datadog not implemented")
-
-	case TelegrafAgent:
-		statter, err = newTelegrafStatter(
-			statsd.Address(addr),
-			statsd.Prefix(prefix),
-			statsd.ErrorHandler(errHandler),
-			statsd.TagsFormat(statsd.InfluxDB),
-			statsd.Tags(config.BaseTags()...),
-		)
-	default:
-		return ErrUnsupportedAgent
-	}
 
 	if err != nil {
 		err = errors.Wrap(err, "statsd init failed")
 		return err
 	}
+
 	clientMux.Lock()
 	client = statter
 	clientMux.Unlock()

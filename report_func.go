@@ -195,6 +195,23 @@ func (t Tags) With(k, v string) Tags {
 	return Tags(SafeMap(t).Set(k, v))
 }
 
+// WithBaseTags allows to inject metrics BaseTags into custom tag set. Useful when
+// tags are used outside of StatsD reporting. For example, within InfluxDB points.
+func (t Tags) WithBaseTags() Tags {
+	baseTags := config.BaseTagsMap()
+	allTags := newSafeMap()
+
+	for k, v := range baseTags {
+		allTags.m[k] = v
+	}
+
+	for k, v := range t.m {
+		allTags.m[k] = v
+	}
+
+	return Tags(allTags)
+}
+
 // NewTags unions unsafe maps as a safe maps used for tags.
 func NewTags(mapsToUnion ...map[string]string) Tags {
 	if len(mapsToUnion) == 0 {
@@ -242,9 +259,5 @@ func JoinTags(tags ...Tags) []string {
 }
 
 func getSingleTag(key, value string) string {
-	if config.Agent == DatadogAgent {
-		return fmt.Sprintf("%s:%s", key, value)
-	}
-
 	return fmt.Sprintf("%s=%s", key, value)
 }
